@@ -165,9 +165,10 @@ function activate(context) {
 	function renameImport(fileContent, oldName, newName) {
 		const lines = fileContent.split("\n");
 		let n = 0
+		const modifiedPath = removeCommonParts()
 		lines.forEach(function () {
-			if (lines[n].replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1").search(oldName) >= 0) {
-				const importLine = lines[n].replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1");
+			if (lines[n].replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1") == modifiedPath + oldName) {
+				const importLine = lines[n].replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1");
 				const replacedImportLine = importLine.replace(oldName, newName);
 				lines[n] = lines[n].replace(importLine, replacedImportLine);
 			}
@@ -195,8 +196,9 @@ function activate(context) {
 		}
 	}
 	function deleteImport(fileContent, deletedFileName) {
+		const modifiedPath = removeCommonParts()
 		const lines = fileContent.split("\n");
-		const filteredLines = lines.filter(line => line.replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1") !== deletedFileName);
+		const filteredLines = lines.filter(line => line.replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1") !== modifiedPath + deletedFileName);
 		let modifiedContent = filteredLines.join("\n");
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
@@ -221,7 +223,7 @@ function activate(context) {
 		endArray.forEach(function () {
 			let n = 0
 			lines.forEach(function () {
-				if (lines[n].replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1").search(endArray[i]) >= 0) {
+				if (lines[n].replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\n]+).*/gm, "$1") == endArray[i]) {
 					console.log("found")
 					lines.push(lines.splice(n, 1)[0]);
 				}

@@ -3,7 +3,7 @@
   "displayName": "AutoImport Sass",
   "description": "Automatically imports scss/sass partials",
   "icon": "images/icon.png",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
@@ -31,7 +31,7 @@
         },
         "AutoImport.partialFilePath": {
           "type": "string",
-          "default": "src/scss/parts",
+          "default": "src/scss",
           "description": "Relative path to scss/sass file folder, where new partials will be created/checked"
         },
         "AutoImport.fileExtension": {
