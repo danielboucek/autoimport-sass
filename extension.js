@@ -33,7 +33,11 @@ function activate(context) {
 		return result;
 	}
 	function createImport(fileContent, importName) {
-		const lines = fileContent.split("\n");
+		let lineEnding = '\n';
+		if (/\r\n/.test(fileContent)) {
+			lineEnding = '\r\n';
+		}
+		const lines = fileContent.split(lineEnding);
 		const extension = getConfigExtension()
 		const quotes = getConfigQuotes()
 		if (extension == "scss") {
@@ -46,7 +50,7 @@ function activate(context) {
 			lines.push(`@import ${importName}`);
 		}
 		orderList(lines)
-		let modifiedContent = lines.join("\n");
+		let modifiedContent = lines.join(lineEnding);
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
 	}
@@ -67,28 +71,24 @@ function activate(context) {
 	function splitPath(filePath, newFileDirectory) {
 		let importName = filePath.split(newFileDirectory)[1];
 		const currentProject = filePath.split(newFileDirectory)[0];
-		console.log(currentProject)
 		if (importName.startsWith("/")) {
 			importName = importName.substring(1)
 		}
 		console.log(importName + " - inside watch folder");
 		// Replace underscore(_) and dot(.) plus 4 characters(scss) with name
 		importName = importName.replace(/_(.*?)\.....$/, '$1');
-		console.log(importName)
 		return { importName, currentProject }
 	}
 
 	async function readAndDecode(mainPath) {
 		const buffer = await vscode.workspace.fs.readFile(vscode.Uri.file(mainPath));
 		let fileContent = new TextDecoder().decode(buffer);
-		fileContent = fileContent.replace(/^\s*[\r\n]/gm, '');
+		fileContent = fileContent.replace(/^\s*$/gm, '');
 		return fileContent;
 	}
 	async function onFileCreate(file) {
-		console.log("file Created")
 		let filePath = file.files[0].fsPath;
 		filePath = upath.normalize(filePath);
-		console.log(filePath);
 		const newFile = getFileFromPath(filePath);
 		let result = await checkAndPerformAction(filePath, newFile);
 		if (result) {
@@ -168,26 +168,28 @@ function activate(context) {
 		}
 	}
 	function renameImport(fileContent, oldImportName, newImportName) {
-		const lines = fileContent.split("\n");
+		let lineEnding = '\n';
+		if (/\r\n/.test(fileContent)) {
+			lineEnding = '\r\n';
+		}
+		const lines = fileContent.split(lineEnding);
 		let n = 0
 		lines.forEach(function () {
-			if (lines[n].replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1") == oldImportName) {
-				const importLine = lines[n].replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1");
+			if (lines[n].replace(/(?:@import) *(?:"|')([^"';\r\n]+).*/gm, "$1") == oldImportName) {
+				const importLine = lines[n].replace(/(?:@import) *(?:"|')([^"';\r\n]+).*/gm, "$1");
 				const replacedImportLine = importLine.replace(oldImportName, newImportName);
 				lines[n] = lines[n].replace(importLine, replacedImportLine);
 			}
 			n++
 		})
-		let modifiedContent = lines.join("\n");
+		let modifiedContent = lines.join(lineEnding);
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
 	}
 	async function onFileDelete(file) {
-		console.log("file(s) deleted")
 		for (let deletedFile of file.files) {
 			let deletedFilePath = deletedFile.fsPath;
 			deletedFilePath = upath.normalize(deletedFilePath);
-			console.log(deletedFilePath)
 			deletedFile = getFileFromPath(deletedFilePath);
 			let result = await checkAndPerformAction(deletedFilePath, deletedFile);
 			if (result) {
@@ -198,9 +200,13 @@ function activate(context) {
 		}
 	}
 	function deleteImport(fileContent, deletedImportName) {
-		const lines = fileContent.split("\n");
-		const filteredLines = lines.filter(line => line.replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1") !== deletedImportName);
-		let modifiedContent = filteredLines.join("\n");
+		let lineEnding = '\n';
+		if (/\r\n/.test(fileContent)) {
+			lineEnding = '\r\n';
+		}
+		const lines = fileContent.split(lineEnding);
+		const filteredLines = lines.filter(line => line.replace(/(?:@import) *(?:"|')([^"';\r\n]+).*/gm, "$1") !== deletedImportName);
+		let modifiedContent = filteredLines.join(lineEnding);
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
 	}
@@ -217,15 +223,12 @@ function activate(context) {
 	}
 
 	function orderList(lines) {
-		console.log("orderList")
 		const config = vscode.workspace.getConfiguration("AutoImport");
 		const endString = config.get("mainEnd", "example1, example2");
 		const endArray = endString.split(",").map(item => item.trim());
-		console.log(endArray)
 		endArray.forEach(function (endItem) {
 			lines.forEach(function (line, index) {
-				if (line.replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\n]+).*/gm, "$1") == endItem) {
-					console.log("sorting")
+				if (line.replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\r\n]+).*/gm, "$1") == endItem) {
 					lines.push(lines.splice(index, 1)[0]);
 				}
 			});
@@ -242,7 +245,6 @@ function activate(context) {
 			currentlyOpenTabfilePath = upath.normalize(currentlyOpenTabfilePath)
 
 			let folderArray = vscode.workspace.workspaceFolders;
-			console.log(folderArray)
 
 			if (folderArray) {
 				let n = 0
@@ -252,7 +254,6 @@ function activate(context) {
 					if (currentlyOpenTabfilePath.includes(name + "\/")) {
 						currentProject = folderArray[n].uri.fsPath;
 						currentProject = upath.normalize(currentProject)
-						console.log("include", currentProject)
 					}
 					n++
 				});
