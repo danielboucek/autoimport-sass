@@ -3,6 +3,7 @@
 const vscode = require("vscode");
 const path = require("path");
 const upath = require("upath");
+const {TextDecoder, TextEncoder} = require("util");
 
 // This method is called when ycur extension is activated
 // Your extension is activated the very first time the command is executed
