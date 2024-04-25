@@ -1,10 +1,10 @@
 {
-  "name": "autoimport",
-  "displayName": "AutoImport",
+  "name": "autoimport-sass",
+  "displayName": "AutoImport Sass",
   "description": "Creates a new scss partial with some prefixed scss and automatically imports itself into main.scss",
   "icon": "images/icon.png",
   "version": "1.0.0",
-  "publisher": "Daniel Boucek",
+  "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
   },
