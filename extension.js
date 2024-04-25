@@ -94,7 +94,7 @@ function activate(context) {
 		if (result) {
 			const { mainPath, fileContent, importName } = result;
 			const modifiedContent = createImport(fileContent, importName);
-			vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+			await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 		}
 	}
 
@@ -118,7 +118,7 @@ function activate(context) {
 					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 					const fileContent = await readAndDecode(mainPath);
 					const modifiedContent = renameImport(fileContent, oldImportName, newImportName);
-					vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 				} else {
 					if (newRenamePath.includes(newFileDirectory)) {
 						console.log("in")
@@ -126,7 +126,7 @@ function activate(context) {
 						const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 						const fileContent = await readAndDecode(mainPath);
 						const modifiedContent = createImport(fileContent, newImportName);
-						vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+						await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 					}
 					if (oldRenamePath.includes(newFileDirectory)) {
 						console.log("out")
@@ -134,7 +134,7 @@ function activate(context) {
 						const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 						const fileContent = await readAndDecode(mainPath);
 						const modifiedContent = deleteImport(fileContent, oldImportName);
-						vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+						await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 					}
 				}
 			}
@@ -146,21 +146,21 @@ function activate(context) {
 					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 					const fileContent = await readAndDecode(mainPath);
 					const modifiedContent = renameImport(fileContent, oldImportName, newImportName);
-					vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 				} else if (newFile.startsWith("_") && newFile.endsWith(`.${extension}`) && (!oldFile.startsWith("_") || !oldFile.endsWith(`.${extension}`))) {
 					console.log("Partial created")
 					const { importName: newImportName, currentProject } = splitPath(newRenamePath, newFileDirectory)
 					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 					const fileContent = await readAndDecode(mainPath);
 					const modifiedContent = createImport(fileContent, newImportName);
-					vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 				} else if ((!newFile.startsWith("_") || !newFile.endsWith(`.${extension}`)) && oldFile.startsWith("_") && oldFile.endsWith(`.${extension}`)) {
 					console.log("Partial no more")
 					const { importName: oldImportName, currentProject } = splitPath(oldRenamePath, newFileDirectory)
 					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 					const fileContent = await readAndDecode(mainPath);
 					const modifiedContent = deleteImport(fileContent, oldImportName);
-					vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 				} else {
 					console.log("Normal file renamed")
 				}
@@ -193,7 +193,7 @@ function activate(context) {
 			if (result) {
 				const { mainPath, fileContent, importName } = result;
 				const modifiedContent = deleteImport(fileContent, importName);
-				vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+				await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 			}
 		}
 	}
@@ -220,18 +220,15 @@ function activate(context) {
 		console.log("orderList")
 		const config = vscode.workspace.getConfiguration("AutoImport");
 		const endString = config.get("mainEnd", "example1, example2");
-		const endArray = endString.split(", ");
-		let i = 0
-		endArray.forEach(function () {
-			let n = 0
-			lines.forEach(function () {
-				if (lines[n].replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\n]+).*/gm, "$1") == endArray[i]) {
+		const endArray = endString.split(",").map(item => item.trim());
+		console.log(endArray)
+		endArray.forEach(function (endItem) {
+			lines.forEach(function (line, index) {
+				if (line.replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\n]+).*/gm, "$1") == endItem) {
 					console.log("sorting")
-					lines.push(lines.splice(n, 1)[0]);
+					lines.push(lines.splice(index, 1)[0]);
 				}
-				n++
 			});
-			i++
 		})
 	}
 
@@ -277,18 +274,24 @@ function activate(context) {
 
 				async function onValueSet(value) {
 					const extension = getConfigExtension()
-					const inputScss = `_${value}.${extension}`;
+					let inputScss;
+					if (value.includes("/")) {
+						const splitValue = value.split("/");
+						const lastValue = splitValue.pop();
+						inputScss = `${splitValue.join("/")}/_${lastValue}.${extension}`;
+					} else {
+						inputScss = `_${value}.${extension}`;
+					}
 					const newFilePath = upath.join(scssPath, inputScss);
 					const newFileName = value;
-					vscode.workspace.fs.writeFile(vscode.Uri.file(newFilePath), new Uint8Array()).then(x => {
-						var x = x
+					await vscode.workspace.fs.writeFile(vscode.Uri.file(newFilePath), new Uint8Array()).then(() => {
 						vscode.workspace.openTextDocument(vscode.Uri.file(newFilePath)).then(doc => {
 							vscode.window.showTextDocument(doc)
 						})
 					})
 					const fileContent = await readAndDecode(mainPath);
 					const modifiedContent = createImport(fileContent, newFileName);
-					vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 				}
 
 			} else {
