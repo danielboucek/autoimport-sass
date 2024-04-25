@@ -12,7 +12,7 @@ const { TextDecoder, TextEncoder } = require("util");
  * @param {vscode.ExtensionContext} context
  */
 
-// TODO: cleanup, support for multiple folder watching?, fix rename and delete of unintended files(folder == file name "sec/sec";), end/start with files:
+// TODO: cleanup, support for multiple folder watching?, start with files:
 
 function activate(context) {
 	const config = vscode.workspace.getConfiguration("AutoImport");
@@ -22,6 +22,11 @@ function activate(context) {
 		const config = vscode.workspace.getConfiguration("AutoImport");
 		const extension = config.get("fileExtension", "scss");
 		return extension;
+	}
+	function getConfigQuotes() {
+		const config = vscode.workspace.getConfiguration("AutoImport");
+		const quotes = config.get("quotes", "single");
+		return quotes;
 	}
 	function getNameFromPath(input) {
 		const result = path.basename(input).slice(1, -5);
@@ -63,8 +68,13 @@ function activate(context) {
 		const lines = fileContent.split("\n");
 		const modifiedPath = removeCommonParts();
 		const extension = getConfigExtension()
+		const quotes = getConfigQuotes()
 		if (extension == "scss") {
-			lines.push(`@import "${modifiedPath}${newFileName}";`);
+			if (quotes == "single") {
+				lines.push(`@import '${modifiedPath}${newFileName}';`);
+			} else if (quotes == "double") {
+				lines.push(`@import "${modifiedPath}${newFileName}";`);
+			}
 		} else if (extension == "sass") {
 			lines.push(`@import ${modifiedPath}${newFileName}`);
 		}
@@ -156,8 +166,10 @@ function activate(context) {
 		const lines = fileContent.split("\n");
 		let n = 0
 		lines.forEach(function () {
-			if (lines[n].replace(/(@import) (.*\/|"*)([a-z-0-9]+).*/, "$3").search(`${oldName}`, `${newName}`) >= 0) {
-				lines[n] = lines[n].replace(`${oldName}`, `${newName}`)
+			if (lines[n].replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1").search(oldName) >= 0) {
+				const importLine = lines[n].replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1");
+				const replacedImportLine = importLine.replace(oldName, newName);
+				lines[n] = lines[n].replace(importLine, replacedImportLine);
 			}
 			n++
 		})
@@ -184,7 +196,7 @@ function activate(context) {
 	}
 	function deleteImport(fileContent, deletedFileName) {
 		const lines = fileContent.split("\n");
-		const filteredLines = lines.filter(line => line.replace(/(@import) (.*\/|"*)([a-z-0-9]+).*/, "$3") !== deletedFileName);
+		const filteredLines = lines.filter(line => line.replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1") !== deletedFileName);
 		let modifiedContent = filteredLines.join("\n");
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
@@ -209,7 +221,7 @@ function activate(context) {
 		endArray.forEach(function () {
 			let n = 0
 			lines.forEach(function () {
-				if (lines[n].replace(/(@import) (.*\/|"*)([a-z-0-9]+).*/, "$3").search(endArray[i]) >= 0) {
+				if (lines[n].replace(/(?:@import) (?:.*\/)([^"';\n]+).*/gm, "$1").search(endArray[i]) >= 0) {
 					console.log("found")
 					lines.push(lines.splice(n, 1)[0]);
 				}
@@ -276,10 +288,10 @@ function activate(context) {
 				}
 
 			} else {
-				vscode.window.showInformationMessage("Not in a folder");
+				vscode.window.showInformationMessage("Not inside a folder");
 			}
 		} else {
-			vscode.window.showInformationMessage("Text editor not active");
+			vscode.window.showInformationMessage("Not inside a text editor");
 		}
 	});
 

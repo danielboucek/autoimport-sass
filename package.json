@@ -3,7 +3,7 @@
   "displayName": "AutoImport Sass",
   "description": "Automatically imports scss/sass partials",
   "icon": "images/icon.png",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
@@ -41,6 +41,14 @@
             "sass"
           ],
           "description": "Choose preffered file extension"
+        },
+        "AutoImport.quotes": {
+          "type": "string",
+          "default": "single",
+          "enum": [
+            "double"
+          ],
+          "description": "Choose preffered quotes single(''), double(\"\")"
         },
         "AutoImport.mainEnd": {
           "type": "string",
