@@ -115,59 +115,52 @@ function activate(context) {
 				console.log("moved")
 				if (newRenamePath.includes(newFileDirectory) && oldRenamePath.includes(newFileDirectory)) {
 					console.log("in - change")
-					const { importName: newImportName, currentProject } = getRelativeImportPath(newRenamePath, importPath)
-					const { importName: oldImportName } = getRelativeImportPath(oldRenamePath, importPath)
-					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
-					const fileContent = await readAndDecode(mainPath);
-					const modifiedContent = renameImport(fileContent, oldImportName, newImportName);
-					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await triggerOperation(newRenamePath, oldRenamePath, importPath, 'rename');
 				} else {
 					if (newRenamePath.includes(newFileDirectory)) {
 						console.log("in")
-						const { importName: newImportName, currentProject } = getRelativeImportPath(newRenamePath, importPath)
-						const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
-						const fileContent = await readAndDecode(mainPath);
-						const modifiedContent = createImport(fileContent, newImportName);
-						await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+						await triggerOperation(newRenamePath, oldRenamePath, importPath, 'create');
 					}
 					if (oldRenamePath.includes(newFileDirectory)) {
 						console.log("out")
-						const { importName: oldImportName, currentProject } = getRelativeImportPath(oldRenamePath, importPath)
-						const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
-						const fileContent = await readAndDecode(mainPath);
-						const modifiedContent = deleteImport(fileContent, oldImportName);
-						await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+						await triggerOperation(newRenamePath, oldRenamePath, importPath, 'delete');
 					}
 				}
 			}
 			if (oldFile !== newFile) {
 				if (newFile.startsWith("_") && newFile.endsWith(`.${extension}`) && oldFile.startsWith("_") && oldFile.endsWith(`.${extension}`)) {
 					console.log("Partial renamed")
-					const { importName: newImportName, currentProject } = getRelativeImportPath(newRenamePath, importPath)
-					const { importName: oldImportName } = getRelativeImportPath(oldRenamePath, importPath)
-					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
-					const fileContent = await readAndDecode(mainPath);
-					const modifiedContent = renameImport(fileContent, oldImportName, newImportName);
-					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await triggerOperation(newRenamePath, oldRenamePath, importPath, 'rename');
 				} else if (newFile.startsWith("_") && newFile.endsWith(`.${extension}`) && (!oldFile.startsWith("_") || !oldFile.endsWith(`.${extension}`))) {
 					console.log("Partial created")
-					const { importName: newImportName, currentProject } = getRelativeImportPath(newRenamePath, importPath)
-					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
-					const fileContent = await readAndDecode(mainPath);
-					const modifiedContent = createImport(fileContent, newImportName);
-					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await triggerOperation(newRenamePath, oldRenamePath, importPath, 'create');
 				} else if ((!newFile.startsWith("_") || !newFile.endsWith(`.${extension}`)) && oldFile.startsWith("_") && oldFile.endsWith(`.${extension}`)) {
 					console.log("Partial no more")
-					const { importName: oldImportName, currentProject } = getRelativeImportPath(oldRenamePath, importPath)
-					const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
-					const fileContent = await readAndDecode(mainPath);
-					const modifiedContent = deleteImport(fileContent, oldImportName);
-					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+					await triggerOperation(newRenamePath, oldRenamePath, importPath, 'delete');
 				} else {
 					console.log("Normal file renamed")
 				}
 			}
 		}
+	}
+	async function triggerOperation(newRenamePath, oldRenamePath, importPath, operation) {
+		const { importName: newImportName, currentProject } = getRelativeImportPath(newRenamePath, importPath);
+		const { importName: oldImportName } = getRelativeImportPath(oldRenamePath, importPath);
+		const mainPath = upath.join(currentProject, importPath);
+		const fileContent = await readAndDecode(mainPath);
+		let modifiedContent;
+		switch (operation) {
+			case 'rename':
+				modifiedContent = renameImport(fileContent, oldImportName, newImportName);
+				break;
+			case 'create':
+				modifiedContent = createImport(fileContent, newImportName);
+				break;
+			case 'delete':
+				modifiedContent = deleteImport(fileContent, oldImportName);
+				break;
+		}
+		await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 	}
 	function renameImport(fileContent, oldImportName, newImportName) {
 		let lineEnding = '\n';
@@ -243,64 +236,52 @@ function activate(context) {
 	let disposable = vscode.commands.registerCommand('extension.newPartialFile', function () {
 
 		if (vscode.window.activeTextEditor) {
-			let currentlyOpenTabfilePath = vscode.window.activeTextEditor.document.fileName;
-			currentlyOpenTabfilePath = upath.normalize(currentlyOpenTabfilePath)
-
-			let folderArray = vscode.workspace.workspaceFolders;
-
-			if (folderArray) {
-				let n = 0
-				let currentProject
-				folderArray.forEach(function () {
-					const name = folderArray[n].name;
-					if (currentlyOpenTabfilePath.includes(name + "\/")) {
-						currentProject = folderArray[n].uri.fsPath;
-						currentProject = upath.normalize(currentProject)
-					}
-					n++
-				});
-
-				const config = vscode.workspace.getConfiguration("AutoImport");
-				const scssPath = upath.join(currentProject, config.get("defaultImportPath", "src/scss"));
-				const importPath = config.get("importPath", "src/scss/main.scss");
-				const mainPath = upath.join(currentProject, importPath);
-
-				const input = vscode.window.showInputBox({
-					'value': '',
-					'placeHolder': 'parse',
-					'prompt': 'File Name'
-				});
-				input.then((value) => {
-					if (value != undefined && value != "") {
-						onValueSet(value)
-					}
-				})
-
-				async function onValueSet(value) {
-					const extension = getConfigExtension()
-					let inputScss;
-					if (value.includes("/")) {
-						const splitValue = value.split("/");
-						const lastValue = splitValue.pop();
-						inputScss = `${splitValue.join("/")}/_${lastValue}.${extension}`;
-					} else {
-						inputScss = `_${value}.${extension}`;
-					}
-					const newFilePath = upath.join(scssPath, inputScss);
-					const { importName } = getRelativeImportPath(newFilePath, importPath,)
-					await vscode.workspace.fs.writeFile(vscode.Uri.file(newFilePath), new Uint8Array()).then(() => {
-						vscode.workspace.openTextDocument(vscode.Uri.file(newFilePath)).then(doc => {
-							vscode.window.showTextDocument(doc)
-						})
-					})
-					const fileContent = await readAndDecode(mainPath);
-					const modifiedContent = createImport(fileContent, importName);
-					await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
-				}
-
-			} else {
-				vscode.window.showInformationMessage("Not inside a folder");
+			const activeEditorUri = vscode.window.activeTextEditor.document.uri;
+			const workspaceFolder = vscode.workspace.getWorkspaceFolder(activeEditorUri);
+			if (!workspaceFolder) {
+				vscode.window.showInformationMessage('Not inside a folder');
+				return;
 			}
+			const currentProject = upath.normalize(workspaceFolder.uri.fsPath);
+
+			const config = vscode.workspace.getConfiguration("AutoImport");
+			const scssPath = upath.join(currentProject, config.get("defaultImportPath", "src/scss"));
+			const importPath = config.get("importPath", "src/scss/main.scss");
+			const mainPath = upath.join(currentProject, importPath);
+
+			const input = vscode.window.showInputBox({
+				'value': '',
+				'placeHolder': 'parse',
+				'prompt': 'File Name'
+			});
+			input.then((value) => {
+				if (value != undefined && value != "") {
+					onValueSet(value)
+				}
+			})
+
+			async function onValueSet(value) {
+				const extension = getConfigExtension()
+				let inputScss;
+				if (value.includes("/")) {
+					const splitValue = value.split("/");
+					const lastValue = splitValue.pop();
+					inputScss = `${splitValue.join("/")}/_${lastValue}.${extension}`;
+				} else {
+					inputScss = `_${value}.${extension}`;
+				}
+				const newFilePath = upath.join(scssPath, inputScss);
+				const { importName } = getRelativeImportPath(newFilePath, importPath,)
+				await vscode.workspace.fs.writeFile(vscode.Uri.file(newFilePath), new Uint8Array()).then(() => {
+					vscode.workspace.openTextDocument(vscode.Uri.file(newFilePath)).then(doc => {
+						vscode.window.showTextDocument(doc)
+					})
+				})
+				const fileContent = await readAndDecode(mainPath);
+				const modifiedContent = createImport(fileContent, importName);
+				await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
+			}
+
 		} else {
 			vscode.window.showInformationMessage("Not inside a text editor");
 		}
