@@ -1,0 +1,79 @@
+{
+  "name": "autoimport",
+  "displayName": "AutoImport",
+  "description": "Creates a new scss partial with some prefixed scss and automatically imports itself into main.scss",
+  "icon": "images/icon.png",
+  "version": "1.0.0",
+  "publisher": "Daniel Boucek",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "AutoImport",
+      "properties": {
+        "AutoImport.useAutoCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically checks for new created files and imports them, also checks for any changes to that files(rename, delete)"
+        },
+        "AutoImport.importPath": {
+          "type": "string",
+          "default": "src/scss/main.scss",
+          "description": "Relative path to main scss/sass file where new partials will be imported"
+        },
+        "AutoImport.partialFilePath": {
+          "type": "string",
+          "default": "src/scss/parts",
+          "description": "Relative path to scss/sass file folder, where new partials will be created/checked"
+        },
+        "AutoImport.fileExtension": {
+          "type": "string",
+          "default": "scss",
+          "enum": [
+            "sass"
+          ],
+          "description": "Choose preffered file extension"
+        },
+        "AutoImport.mainEnd": {
+          "type": "string",
+          "default": "example1, example2",
+          "description": "File names that should always be at the end of the main file."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "extension.newPartialFile",
+        "title": "New Partial File"
+      }
+    ]
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "node ./test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.0.0",
+    "@types/mocha": "^10.0.1",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "@vscode/test-electron": "^2.2.0",
+    "eslint": "^8.28.0",
+    "glob": "^8.0.3",
+    "mocha": "^10.1.0",
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "memfs": "^3.4.13",
+    "upath": "^2.0.1"
+  }
+}
