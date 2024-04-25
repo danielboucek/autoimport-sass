@@ -22,17 +22,22 @@
         "AutoImport.useAutoCheck": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically checks for new created files and imports them, also checks for any changes to that files(rename, delete)"
+          "description": "Listens for any changes inside a specified folder and imports, deletes, renames partials accordingly in the main file."
         },
         "AutoImport.importPath": {
           "type": "string",
           "default": "src/scss/main.scss",
-          "description": "Relative path to main scss/sass file where new partials will be imported"
+          "description": "Relative path to main scss/sass file where partials will be managed"
         },
         "AutoImport.partialFilePath": {
           "type": "string",
           "default": "src/scss",
-          "description": "Relative path to scss/sass file folder, where new partials will be created/checked"
+          "description": "Relative path to a folder, where listeners should be active, also works in subfolders"
+        },
+        "AutoImport.defaultImportPath": {
+          "type": "string",
+          "default": "src/scss",
+          "description": "Relative path to a folder, where new partials will be created by default using the newPartialFile command"
         },
         "AutoImport.fileExtension": {
           "type": "string",

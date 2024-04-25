@@ -64,24 +64,45 @@ function activate(context) {
 		}
 		return modifiedPath;
 	}
-	function createImport(fileContent, newFileName) {
+	function createImport(fileContent, importName) {
 		const lines = fileContent.split("\n");
-		const modifiedPath = removeCommonParts();
 		const extension = getConfigExtension()
 		const quotes = getConfigQuotes()
 		if (extension == "scss") {
 			if (quotes == "single") {
-				lines.push(`@import '${modifiedPath}${newFileName}';`);
+				lines.push(`@import '${importName}';`);
 			} else if (quotes == "double") {
-				lines.push(`@import "${modifiedPath}${newFileName}";`);
+				lines.push(`@import "${importName}";`);
 			}
 		} else if (extension == "sass") {
-			lines.push(`@import ${modifiedPath}${newFileName}`);
+			lines.push(`@import ${importName}`);
 		}
 		orderList(lines)
 		let modifiedContent = lines.join("\n");
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
+	}
+	// Check if file is inside partialFilePath and is a partial
+	async function checkAndPerformAction(filePath, file,) {
+		const config = vscode.workspace.getConfiguration("AutoImport");
+		const newFileDirectory = config.get("partialFilePath", "src/scss");
+		const extension = getConfigExtension()
+		if (filePath.includes(newFileDirectory) && file.endsWith(`.${extension}`) && file.startsWith("_")) {
+			let splitPath = filePath.split(newFileDirectory)[1];
+			const currentProject = filePath.split(newFileDirectory)[0];
+			console.log(currentProject)
+			if (splitPath.startsWith("/")) {
+				splitPath = splitPath.substring(1)
+			}
+			console.log(splitPath + " - inside watch folder");
+			// Replace underscore(_) and dot(.) plus 4 characters(scss) with name
+			splitPath = splitPath.replace(/_(.*?)\.....$/, '$1');
+			console.log(splitPath)
+			const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
+			const fileContent = await readAndDecode(mainPath);
+			return { mainPath, fileContent, splitPath }
+		}
+		return false;
 	}
 
 	async function readAndDecode(mainPath) {
@@ -93,17 +114,13 @@ function activate(context) {
 	async function onFileCreate(file) {
 		console.log("file Created")
 		let filePath = file.files[0].fsPath;
-		filePath = upath.normalize(filePath)
+		filePath = upath.normalize(filePath);
+		console.log(filePath);
 		const newFile = getFileFromPath(filePath);
-		const config = vscode.workspace.getConfiguration("AutoImport");
-		const newFileDirectory = config.get("partialFilePath", "src/scss");
-		const extension = getConfigExtension()
-		if (path.dirname(filePath).endsWith(`${newFileDirectory}`) && newFile.endsWith(`.${extension}`) && newFile.startsWith("_")) {
-			console.log("- inside watch folder");
-			const newFileName = newFile.slice(1, -5);
-			const mainPath = getMainPathFromFilePath(newFileName, filePath)
-			const fileContent = await readAndDecode(mainPath);
-			const modifiedContent = createImport(fileContent, newFileName);
+		let result = await checkAndPerformAction(filePath, newFile);
+		if (result) {
+			const { mainPath, fileContent, splitPath } = result;
+			const modifiedContent = createImport(fileContent, splitPath);
 			vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 		}
 	}
@@ -182,23 +199,19 @@ function activate(context) {
 		for (let deletedFile of file.files) {
 			let deletedFilePath = deletedFile.fsPath;
 			deletedFilePath = upath.normalize(deletedFilePath);
+			console.log(deletedFilePath)
 			deletedFile = getFileFromPath(deletedFilePath);
-			const deletedFileName = getNameFromPath(deletedFilePath);
-			const config = vscode.workspace.getConfiguration("AutoImport");
-			const newFileDirectory = config.get("partialFilePath", "src/scss");
-			const extension = getConfigExtension();
-			if (path.dirname(deletedFilePath).endsWith(`${newFileDirectory}`) && deletedFile.startsWith("_") && deletedFile.endsWith(`.${extension}`)) {
-				const mainPath = getMainPathFromFilePath(deletedFileName, deletedFilePath);
-				const fileContent = await readAndDecode(mainPath);
-				const modifiedContent = deleteImport(fileContent, deletedFileName);
-				await vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), Buffer.from(modifiedContent));
+			let result = await checkAndPerformAction(deletedFilePath, deletedFile);
+			if (result) {
+				const { mainPath, fileContent, splitPath } = result;
+				const modifiedContent = deleteImport(fileContent, splitPath);
+				vscode.workspace.fs.writeFile(vscode.Uri.file(mainPath), modifiedContent);
 			}
 		}
 	}
-	function deleteImport(fileContent, deletedFileName) {
-		const modifiedPath = removeCommonParts()
+	function deleteImport(fileContent, deletedImportName) {
 		const lines = fileContent.split("\n");
-		const filteredLines = lines.filter(line => line.replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1") !== modifiedPath + deletedFileName);
+		const filteredLines = lines.filter(line => line.replace(/(?:@import) *(?:"|')([^"';\n]+).*/gm, "$1") !== deletedImportName);
 		let modifiedContent = filteredLines.join("\n");
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
@@ -216,6 +229,7 @@ function activate(context) {
 	}
 
 	function orderList(lines) {
+		console.log("orderList")
 		const config = vscode.workspace.getConfiguration("AutoImport");
 		const endString = config.get("mainEnd", "example1, example2");
 		const endArray = endString.split(", ");
@@ -224,7 +238,7 @@ function activate(context) {
 			let n = 0
 			lines.forEach(function () {
 				if (lines[n].replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\n]+).*/gm, "$1") == endArray[i]) {
-					console.log("found")
+					console.log("sorting")
 					lines.push(lines.splice(n, 1)[0]);
 				}
 				n++
