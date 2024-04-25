@@ -3,7 +3,7 @@
   "displayName": "AutoImport Sass",
   "description": "Automatically imports scss/sass partials",
   "icon": "images/icon.png",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
@@ -19,7 +19,7 @@
     "configuration": {
       "title": "AutoImport",
       "properties": {
-        "AutoImport.useAutoCheck": {
+        "AutoImport.useListeners": {
           "type": "boolean",
           "default": true,
           "description": "Listens for any changes inside a specified folder and imports, deletes, renames partials accordingly in the main file."

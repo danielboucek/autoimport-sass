@@ -16,7 +16,7 @@ const { TextDecoder, TextEncoder } = require("util");
 
 function activate(context) {
 	const config = vscode.workspace.getConfiguration("AutoImport");
-	const autoCheck = config.get("useAutoCheck", true);
+	const listeners = config.get("useListeners", true);
 
 	function getConfigExtension() {
 		const config = vscode.workspace.getConfiguration("AutoImport");
@@ -204,7 +204,7 @@ function activate(context) {
 		modifiedContent = new TextEncoder().encode(modifiedContent);
 		return modifiedContent;
 	}
-	if (autoCheck == true) {
+	if (listeners == true) {
 		vscode.workspace.onDidCreateFiles((file) => {
 			onFileCreate(file);
 		})
@@ -258,7 +258,7 @@ function activate(context) {
 				});
 
 				const config = vscode.workspace.getConfiguration("AutoImport");
-				const scssPath = upath.join(currentProject, config.get("partialFilePath", "src/scss"));
+				const scssPath = upath.join(currentProject, config.get("defaultImportPath", "src/scss"));
 				const mainPath = upath.join(currentProject, config.get("importPath", "src/scss/main.scss"));
 
 				const input = vscode.window.showInputBox({
