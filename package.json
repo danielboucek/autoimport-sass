@@ -3,7 +3,7 @@
   "displayName": "AutoImport Sass",
   "description": "Automatically imports scss/sass partials",
   "icon": "images/icon.png",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
