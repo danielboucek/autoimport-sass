@@ -12,4 +12,4 @@ Extension that automatically imports scss/sass partials into the specified main 
 - Make sure to choose your preferred relative path. A relative path is relative to the separate workspace folders
 - You can use newPartialFile command to create new partials in your preferred location. You can specify custom subfolders. (Only type the file name ex. 'footer', 'parts/footer', ../footer)
 
-![](https://s12.gifyu.com/images/SQiz0.gif)
+![](images/preview.gif)

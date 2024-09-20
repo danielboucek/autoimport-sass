@@ -3,7 +3,14 @@
   "displayName": "AutoImport Sass",
   "description": "Automatically imports scss/sass partials",
   "icon": "images/icon.png",
-  "version": "1.1.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielboucek/autoimport-sass"
+  },
+  "bugs": {
+    "url": "https://github.com/danielboucek/autoimport-sass/issues"
+  },
+  "version": "1.1.3",
   "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
@@ -14,8 +21,12 @@
   "keywords": [
     "project",
     "productivity",
-    "automatization"
+    "automatization",
+    "sass",
+    "sccs",
+    "import"
   ],
+  "license": "MIT",
   "activationEvents": [
     "onStartupFinished"
   ],
