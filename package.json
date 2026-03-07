@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/danielboucek/autoimport-sass/issues"
   },
-  "version": "1.1.3",
+  "version": "1.2.0",
   "publisher": "DanielBoucek",
   "engines": {
     "vscode": "^1.74.0"
@@ -75,6 +75,19 @@
           "type": "string",
           "default": "example1, example2",
           "description": "File names that should always be at the end of the main file."
+        },
+        "AutoImport.useRule": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use the @use rule instead of @import. Recommended for modern Sass projects."
+        },
+        "AutoImport.newFileTemplate": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Lines to prepend to every new partial file created by the New Partial File command. Each item is one full line, e.g. @use 'variables' as var;."
         }
       }
     },
@@ -98,7 +111,7 @@
     "@vscode/test-electron": "^2.2.0",
     "eslint": "^8.28.0",
     "glob": "^8.0.3",
-    "mocha": "^10.1.0",
+    "mocha": "^7.2.0",
     "typescript": "^4.9.3"
   },
   "dependencies": {

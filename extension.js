@@ -63,9 +63,33 @@ function activate(context) {
 				}
 				const newFilePath = upath.join(scssPath, inputScss);
 				const { importName } = getRelativeImportPath(newFilePath, importPath,)
-				await vscode.workspace.fs.writeFile(vscode.Uri.file(newFilePath), new Uint8Array()).then(() => {
+				const templateLines = config.get("newFileTemplate", []);
+				let cursorPosition = null;
+				const finalLines = templateLines.map((line, lineIndex) => {
+					line = line.replace(/\$\{filename\}/g, value);
+					const charIndex = line.indexOf('${cursor}');
+					if (cursorPosition === null && charIndex !== -1) {
+						cursorPosition = new vscode.Position(lineIndex, charIndex);
+						line = line.replace('${cursor}', '');
+					}
+					return line;
+				});
+
+				const initialContent = finalLines.length > 0
+					? new TextEncoder().encode(finalLines.join('\n') + '\n')
+					: new Uint8Array();
+				await vscode.workspace.fs.writeFile(vscode.Uri.file(newFilePath), initialContent).then(() => {
 					vscode.workspace.openTextDocument(vscode.Uri.file(newFilePath)).then(doc => {
-						vscode.window.showTextDocument(doc)
+						vscode.window.showTextDocument(doc).then(editor => {
+							let position;
+							if (cursorPosition !== null) {
+								position = cursorPosition;
+							} else {
+								const lastLine = doc.lineCount - 1;
+								position = new vscode.Position(lastLine, doc.lineAt(lastLine).text.length);
+							}
+							editor.selection = new vscode.Selection(position, position);
+						})
 					})
 				})
 				const fileContent = await readAndDecode(mainPath);
@@ -89,6 +113,16 @@ function getConfigExtension() {
 	const config = vscode.workspace.getConfiguration("AutoImport");
 	const extension = config.get("fileExtension", "scss");
 	return extension;
+}
+
+/**
+ * Retrieves the useRule configuration.
+ * @returns {boolean} Whether to use the -@use rule instead of -@import
+ */
+function getConfiguseRule() {
+	const config = vscode.workspace.getConfiguration("AutoImport");
+	const useRule = config.get("useRule", false);
+	return useRule;
 }
 
 /**
@@ -125,14 +159,16 @@ function createImport(fileContent, importName) {
 	const lines = fileContent.split(lineEnding);
 	const extension = getConfigExtension()
 	const quotes = getConfigQuotes()
+	const useRule = getConfiguseRule()
+	const rule = useRule ? '@use' : '@import';
 	if (extension == "scss") {
 		if (quotes == "single") {
-			lines.push(`@import '${importName}';`);
+			lines.push(`${rule} '${importName}';`);
 		} else if (quotes == "double") {
-			lines.push(`@import "${importName}";`);
+			lines.push(`${rule} "${importName}";`);
 		}
 	} else if (extension == "sass") {
-		lines.push(`@import ${importName}`);
+		lines.push(`${rule} ${importName}`);
 	}
 	orderList(lines)
 	const modifiedContent = lines.join(lineEnding);
@@ -301,8 +337,8 @@ function renameImport(fileContent, oldImportName, newImportName) {
 	const lines = fileContent.split(lineEnding);
 	let n = 0
 	lines.forEach(function () {
-		if (lines[n].replace(/(?:@import) *(?:"|')([^"';\r\n]+).*/gm, "$1") == oldImportName) {
-			const importLine = lines[n].replace(/(?:@import) *(?:"|')([^"';\r\n]+).*/gm, "$1");
+		if (lines[n].replace(/(?:@import|@use) *(?:"|')([^"';\r\n]+).*/gm, "$1") == oldImportName) {
+			const importLine = lines[n].replace(/(?:@import|@use) *(?:"|')([^"';\r\n]+).*/gm, "$1");
 			const replacedImportLine = importLine.replace(oldImportName, newImportName);
 			lines[n] = lines[n].replace(importLine, replacedImportLine);
 		}
@@ -344,7 +380,7 @@ function deleteImport(fileContent, deletedImportName) {
 		lineEnding = '\r\n';
 	}
 	const lines = fileContent.split(lineEnding);
-	const filteredLines = lines.filter(line => line.replace(/(?:@import) *(?:"|')([^"';\r\n]+).*/gm, "$1") !== deletedImportName);
+	const filteredLines = lines.filter(line => line.replace(/(?:@import|@use) *(?:"|')([^"';\r\n]+).*/gm, "$1") !== deletedImportName);
 	const modifiedContent = filteredLines.join(lineEnding);
 	const encodedContent = new TextEncoder().encode(modifiedContent);
 	return encodedContent;
@@ -362,7 +398,7 @@ function orderList(lines) {
 	const endArray = endString.split(",").map(item => item.trim());
 	endArray.forEach(function (endItem) {
 		lines.forEach(function (line, index) {
-			if (line.replace(/(?:@import) *(?:"|')(?:.*\/)*([^"';\r\n]+).*/gm, "$1") == endItem) {
+			if (line.replace(/(?:@import|@use) *(?:"|')(?:.*\/)*([^"';\r\n]+).*/gm, "$1") == endItem) {
 				lines.push(lines.splice(index, 1)[0]);
 			}
 		});
